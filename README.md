@@ -1,4 +1,3 @@
-CM_GEMINIRD
+CyanogenMod
 ===========
-
-我的测试
+我的i9300
