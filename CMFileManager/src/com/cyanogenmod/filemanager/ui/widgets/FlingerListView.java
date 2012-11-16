@@ -23,15 +23,19 @@ import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.AbsListView.OnScrollListener;
 
+import com.cyanogenmod.filemanager.activities.NavigationActivity;
 import com.cyanogenmod.filemanager.util.AndroidHelper;
 
 /**
  * A {@link ListView} implementation for remove items using flinging gesture.
  */
-public class FlingerListView extends ListView {
+public class FlingerListView extends ListView implements OnScrollListener {
 
     /**
      * An interface for dispatch flinging gestures
@@ -199,6 +203,8 @@ public class FlingerListView extends ListView {
         //Initialize variables
         this.mFlingRemovePercentaje = DEFAULT_FLING_REMOVE_PERCENTAJE;
         this.mFlingThreshold = AndroidHelper.convertDpToPixel(getContext(), MIN_FLINGER_THRESHOLD);
+
+        this.setOnScrollListener(this);
     }
 
     /**
@@ -473,5 +479,32 @@ public class FlingerListView extends ListView {
         this.mFlingingStarted = false;
         this.mMoveStarted = false;
         this.mFlingingView = null;
+    }
+
+    @Override
+    public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount,
+            int totalItemCount) {
+
+        mX = firstVisibleItem; 
+        
+    }
+
+    private int mX;
+    public int getScrX(){
+        return mX;
+    }
+    private int mY;
+    public int getScrY(){
+        return mY;
+    }
+    
+    @Override
+    public void onScrollStateChanged(AbsListView view, int scrollState) {
+        
+        if(scrollState == OnScrollListener.SCROLL_STATE_IDLE){
+            ViewGroup item = (ViewGroup)this.getChildAt(0);
+            mY=item.getTop();  
+        }
+        
     }
 }

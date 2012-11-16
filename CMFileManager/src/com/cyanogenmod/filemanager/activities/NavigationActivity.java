@@ -42,7 +42,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.AbsListView.OnScrollListener;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AbsListView;
 import android.widget.LinearLayout;
 import android.widget.ListPopupWindow;
 import android.widget.PopupWindow;
@@ -403,6 +405,33 @@ public class NavigationActivity extends Activity
         //All destroy. Continue
         super.onDestroy();
     }
+    
+    private int mScrollPostion = -1;
+    private OnScrollListener scrollLis = new OnScrollListener(){
+
+        @Override
+        public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount,
+                int totalItemCount) {
+            // TODO Auto-generated method stub
+            
+        }
+
+        @Override
+        public void onScrollStateChanged(AbsListView view, int scrollState) {
+            // TODO Auto-generated method stub
+            if(scrollState == OnScrollListener.SCROLL_STATE_IDLE){
+                if(NavigationActivity.this.mCurrentNavigationView > -1){
+                    NavigationView nav = 
+                        NavigationActivity.this.mNavigationViews[NavigationActivity.this.mCurrentNavigationView];
+                    if(nav != null){
+                        nav.setMY(nav.getScrollY());
+                        nav.setMX(nav.getScrollX());
+                    }
+                }
+            }
+        }
+        
+    };
 
     /**
      * Method that returns the current navigation view.
@@ -1210,6 +1239,7 @@ public class NavigationActivity extends Activity
                 int viewId = info.getId();
                 NavigationView view = getNavigationView(viewId);
                 view.onRestoreState(info);
+                //view.SetSelection(y);
 
             } else if (realHistory.getItem() instanceof SearchInfoParcelable) {
                 //Search (open search with the search results)
@@ -1234,6 +1264,7 @@ public class NavigationActivity extends Activity
             }
 
             //Navigate
+            
             return true;
 
         } catch (Throwable ex) {

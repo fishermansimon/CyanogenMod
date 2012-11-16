@@ -25,13 +25,16 @@ import android.os.storage.StorageVolume;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ListAdapter;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
+import android.widget.AbsListView.OnScrollListener;
 
 import com.cyanogenmod.filemanager.FileManagerApplication;
 import com.cyanogenmod.filemanager.R;
+import com.cyanogenmod.filemanager.activities.NavigationActivity;
 import com.cyanogenmod.filemanager.adapters.FileSystemObjectAdapter;
 import com.cyanogenmod.filemanager.adapters.FileSystemObjectAdapter.OnSelectionChangedListener;
 import com.cyanogenmod.filemanager.console.ConsoleAllocException;
@@ -183,7 +186,25 @@ public class NavigationView extends RelativeLayout implements
 
     private int mId;
     private int mX;
+    
+    public void setMX(int x){
+        this.mX = x;
+    }
+    
+    public int getMX(){
+        return this.mX;
+    }
+    
     private int mY;
+    
+    public void setMY(int y){
+        mY = y;
+    }
+    
+    public int getMY(){
+        return mY;
+    }
+    
     private String mCurrentDir;
     private FileSystemObject mSelectedDir;
     private NavigationLayoutMode mCurrentMode;
@@ -279,8 +300,10 @@ public class NavigationView extends RelativeLayout implements
         NavigationViewInfoParcelable parcel = new NavigationViewInfoParcelable();
         parcel.setId(this.mId);
         parcel.setCurrentDir(this.mCurrentDir);
-        parcel.setSelectedDir(this.mSelectedDir.getName());
-        parcel.setSelParentDir(this.mSelectedDir.getParent());
+        if(this.mSelectedDir != null){
+            parcel.setSelectedDir(this.mSelectedDir.getName());
+            parcel.setSelParentDir(this.mSelectedDir.getParent());
+        }
         parcel.setChRooted(this.mChRooted);
         parcel.setSelectedFiles(this.mAdapter.getSelectedItems());
         parcel.setFiles(this.mFiles);
@@ -308,7 +331,7 @@ public class NavigationView extends RelativeLayout implements
         String parentName = info.getSelParentDir();
         
         FileSystemObject selectedObj = null;
-        if(mSelectedDir != null){
+        if(dirName != null){
         	selectedObj = new Directory(dirName, parentName, null, null, null, null);
         }
         //Update the views
@@ -319,6 +342,10 @@ public class NavigationView extends RelativeLayout implements
         	refresh(selectedObj);
         }
         //this.mAdapterView.setSelection(this.mY);
+    }
+    
+    public void SetSelection(int posi){
+        this.mAdapterView.setSelection(posi);
     }
 
     /**
@@ -521,17 +548,6 @@ public class NavigationView extends RelativeLayout implements
         if (fso != null) {
             try {
                 int position = this.mAdapter.getPosition(fso);
-                if(position == -1){
-                	String tagPath = fso.getFullPath();
-	                for(int i=0;i<this.mAdapter.getCount();i++){
-	                	FileSystemObject temp = this.mAdapter.getItem(i);
-	                	String tmpPath = temp.getFullPath();
-	                	if(tmpPath.equals(tagPath) || tmpPath == tagPath){
-	                		position = i;
-	                		break;
-	                	}
-	                }
-                }
                 this.mAdapterView.setSelection(position);
             } catch (Exception e) {
                 this.mAdapterView.setSelection(0);
@@ -930,15 +946,15 @@ public class NavigationView extends RelativeLayout implements
                     this.mOnHistoryListener.onNewHistory(onSaveState());
                 }
             }
-            //Change the breadcrumb。最上文件层次目录导航控件。
+            //Change the breadcrumb。修改最上文件层次目录导航控件。
             if (this.mBreadcrumb != null) {
                 this.mBreadcrumb.changeBreadcrumbPath(newDir, this.mChRooted);
             }
 
-            //Scroll to object?
+            //Scroll to object? 将列表滚动到scrollTo文件位置处，修改原scrollTo方法为新增加的scrollToHistoryPosition方法。
             
             if (scrollTo != null) {
-                scrollTo(scrollTo);
+                scrollToHistoryPosition();
             }
             
             //The current directory is now the "newDir"
@@ -956,6 +972,21 @@ public class NavigationView extends RelativeLayout implements
             } catch (Throwable ex) {
                 /**NON BLOCK**/
             }
+        }
+    }
+
+    private void scrollToHistoryPosition() {
+        if(this.mAdapterView instanceof FlingerListView){
+            this.mAdapter.notifyDataSetChanged();
+            //此处必须要使用post调用setSelectionFromTop方法，可能类似与.NET中的UI更新必须在线程中更新视图。
+            this.post(new Runnable(){
+                @Override
+                public void run() {
+                    //实现滚动到历史位置的代码。
+                    NavigationView naview = NavigationView.this;
+                    ((FlingerListView)naview.mAdapterView).setSelectionFromTop(naview.mX,naview.mY);
+                }
+            });
         }
     }
 
@@ -1038,8 +1069,16 @@ public class NavigationView extends RelativeLayout implements
             if (fso instanceof ParentDirectory) {
                 changeCurrentDir(fso.getParent(), true, false, false, null, null);
             } else if (fso instanceof Directory) {
-            	this.mY = parent.getFirstVisiblePosition();
+                //记录选择的目录对象，在后面判断是否需要滚动到历史位置时使用。
             	this.mSelectedDir = fso;
+            	//将FlingerListView中的记录的滚动位置取出。
+            	if(this.mAdapterView instanceof FlingerListView){
+                	FlingerListView liView = (FlingerListView)this.mAdapterView;
+                	if(liView != null){
+                	    this.mX = liView.getScrX();
+                	    this.mY = liView.getScrY();
+                	}
+            	}
                 changeCurrentDir(fso.getFullPath(), true, false, false, null, null);
             } else if (fso instanceof Symlink) {
                 Symlink symlink = (Symlink)fso;
